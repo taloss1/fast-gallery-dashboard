@@ -605,8 +605,11 @@
       success: '#10b981', // Emerald 500
       warning: '#f59e0b', // Amber 500
       danger: '#ef4444', // Red 500
+      // Palette matching Source (Blue -> Indigo -> Purple -> Pink)
       palette: ['#3B82F6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899', '#f43f5e']
     };
+
+    // --- Mock Data Generators (Same logic as provided file) ---
     const GALLERY_SITE_DIM = (function() {
       const sources = ['Editor', 'Template', 'App Market', 'Duplicate', 'Import', 'Other'];
       const presets = ['grid', 'masonry', 'slider', 'carousel', 'strip', 'Other'];
@@ -640,6 +643,7 @@
       }
       return rows;
     })();
+
     const GALLERY_DASHBOARD_MAIN = (function() {
       const totalEditor = 129825;
       const rows = [];
@@ -690,6 +694,7 @@
       }
       return rows;
     })();
+
     const GALLERY_DASHBOARD_FACT = (function() {
         const rows = [];
         const start = new Date('2026-01-01');
@@ -707,6 +712,8 @@
         }
         return rows;
     })();
+
+    // Helper: Dimensions (sites, ready, galleries for grain toggles)
     function getDimData(key) {
         const m = {};
         GALLERY_SITE_DIM.forEach(d => {
@@ -724,6 +731,7 @@
     const DIM_BY_SUB_INDUSTRY = getDimData('sub_industry');
     const DIM_BY_MAIN_INDUSTRY = getDimData('main_industry');
     const DIM_BY_SECTOR = getDimData('suggested_business_sector');
+
     function getDimVal(d, dimKey) {
         if (!dimKey || dimKey === 'none') return '';
         if (dimKey === 'installation_source') return d.site_first_install_src || 'Other';
@@ -732,10 +740,12 @@
         if (dimKey === 'suggested_business_sector') return d.suggested_business_sector || 'Other';
         return '';
     }
+
     function itemCountBucket(c) {
         if (c <= 3) return '1-3'; if (c <= 6) return '4-6'; if (c <= 10) return '7-10';
         if (c <= 15) return '11-15'; if (c <= 20) return '16-20'; return '21+';
     }
+
     function buildGalleriesHistogramData(dimKey) {
         const bucketLabels = ['1', '2', '3', '4', '5', '6+'];
         const readyRows = GALLERY_SITE_DIM.filter(d => d.is_ready);
@@ -760,6 +770,7 @@
         });
         return { labels: bucketLabels, datasets };
     }
+
     function buildItemsHistogramData(dimKey) {
         const buckets = ['1-3', '4-6', '7-10', '11-15', '16-20', '21+'];
         const readyRows = GALLERY_SITE_DIM.filter(d => d.is_ready);
@@ -785,6 +796,7 @@
         });
         return { labels: buckets, datasets };
     }
+
     function buildPresetRankedData(dimKey) {
         const presetMap = {};
         GALLERY_SITE_DIM.filter(d => d.is_ready).forEach(d => {
@@ -820,6 +832,8 @@
         }));
         return { labels: presetLabels, datasets };
     }
+
+    // --- UI Logic ---
     function formatChartDateMmmDd(dateOrStrOrDay) {
         var d;
         if (typeof dateOrStrOrDay === 'number') {
@@ -832,9 +846,11 @@
         if (isNaN(d.getTime())) return String(dateOrStrOrDay);
         return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
     }
+
     function getMainRow(days) {
         return GALLERY_DASHBOARD_MAIN.find(r => r.period_days === parseInt(days, 10)) || GALLERY_DASHBOARD_MAIN[0];
     }
+
     function getFilterScale() {
         const premium = document.getElementById('filter-premium')?.value || 'All';
         const published = document.getElementById('filter-published')?.value || 'All';
@@ -849,6 +865,7 @@
         if (language !== 'All') s *= 0.28;
         return s;
     }
+
     function scaleRow(row, scale) {
         if (scale === 1) return row;
         const s = scale;
@@ -865,15 +882,18 @@
         });
         return out;
     }
+
     function pctGrowth(current, prev) {
         if (prev == null || prev === 0 || typeof current !== 'number' || typeof prev !== 'number') return null;
         return ((current - prev) / prev) * 100;
     }
+
     function updateUI(days) {
         const row = getMainRow(days);
         const scale = getFilterScale();
         const r = scaleRow(row, scale);
         const period = r.period_days;
+
         const installRateDisplay = (r.install_rate_pct < 1e-10) ? '0%' : (Math.round(r.install_rate_pct * 100) / 100) + '%';
         const pctReadyFromInstall = r.installed_sites ? Math.round((r.ready_sites / r.installed_sites) * 100) : 0;
         const pctPremiumFromInstall = r.installed_sites ? Math.round((r.ready_premium_sites / r.installed_sites) * 100) : 0;
@@ -883,7 +903,9 @@
         const pctPremiumFromInstallPrev = (r.installed_sites_prev > 0 && r.ready_premium_sites_prev != null) ? Math.round((r.ready_premium_sites_prev / r.installed_sites_prev) * 100) : null;
         const pctReadyGalleriesPrev = (r.installed_galleries_prev > 0 && r.ready_galleries_prev != null) ? (r.ready_galleries_prev / r.installed_galleries_prev) * 100 : null;
         const avgReadyPrev = (r.ready_sites_prev > 0 && r.ready_galleries_prev != null) ? r.ready_galleries_prev / r.ready_sites_prev : null;
+
         document.querySelectorAll('.period-text').forEach(el => { el.textContent = period; });
+
         const overviewDeltas = [
             pctGrowth(r.ready_sites, r.ready_sites_prev),
             pctGrowth(r.ready_premium_sites, r.ready_premium_sites_prev),
@@ -903,6 +925,7 @@
                 }
             }
         });
+
         const installationsDeltas = [
             pctGrowth(r.installed_sites, r.installed_sites_prev),
             (installRatePrev == null || installRatePrev === 0) ? null : pctGrowth(r.install_rate_pct, installRatePrev)
@@ -918,6 +941,7 @@
                 }
             }
         });
+
         const readyDeltas = [
             pctGrowth(r.ready_sites, r.ready_sites_prev),
             pctGrowth(r.ready_premium_sites, r.ready_premium_sites_prev),
@@ -936,6 +960,7 @@
                 }
             }
         });
+
         document.querySelectorAll('[data-kpi="ready_sites"]').forEach(el => { el.textContent = r.ready_sites.toLocaleString(); });
         document.querySelectorAll('[data-kpi="ready_premium_sites"]').forEach(el => { el.textContent = r.ready_premium_sites.toLocaleString(); });
         document.querySelectorAll('[data-kpi="installed_sites"]').forEach(el => { el.textContent = r.installed_sites.toLocaleString(); });
@@ -944,6 +969,7 @@
         document.querySelectorAll('[data-kpi="pct_premium_ready_from_install"]').forEach(el => { el.textContent = pctPremiumFromInstall + '%'; });
         document.querySelectorAll('[data-kpi="installed_sites_inst"]').forEach(el => { el.textContent = r.installed_sites.toLocaleString(); });
         document.querySelectorAll('[data-kpi="install_rate_inst"]').forEach(el => { el.textContent = installRateDisplay; });
+
         const elSites = document.getElementById('ready-kpi-sites');
         const elPremium = document.getElementById('ready-kpi-premium');
         const elCount = document.getElementById('ready-kpi-count');
@@ -954,6 +980,7 @@
         if (elCount) elCount.textContent = r.ready_galleries.toLocaleString();
         if (elPct) elPct.textContent = pctReadyGalleries + '%';
         if (elAvg) elAvg.textContent = String(r.avg_ready_galleries_per_site || 1.0);
+
         const totalChurn = r.churn_unpublished_count + r.churn_deleted_count + r.churn_replaced_count;
         const pctU = totalChurn ? Math.round((r.churn_unpublished_count / totalChurn) * 100) : '—';
         const pctD = totalChurn ? Math.round((r.churn_deleted_count / totalChurn) * 100) : '—';
@@ -970,8 +997,10 @@
         if (puEl) puEl.textContent = typeof pctU === 'number' ? pctU + '%' : pctU;
         if (pdEl) pdEl.textContent = typeof pctD === 'number' ? pctD + '%' : pctD;
         if (prEl) prEl.textContent = typeof pctR === 'number' ? pctR + '%' : pctR;
+
         renderFunnel(r);
     }
+
     function renderFunnel(row) {
         const period = document.querySelector('.period-btn.active')?.dataset.days || '7';
         const basis = document.querySelector('.funnel-basis-btn.active')?.dataset.basis || 'first';
@@ -993,7 +1022,19 @@
             steps.forEach((s, i) => {
                 const color = colors[i % colors.length];
                 const showFirst = basis === 'first';
-                html += '<div class="funnel-step"><span class="step-name">' + s.name + '</span><div class="bar-wrap"><div class="bar funnel-from-first" style="width:' + s.pctFirst + '%; background:' + color + '; display:' + (showFirst ? 'block' : 'none') + '"></div><div class="bar funnel-from-prev" style="width:' + s.pctPrev + '%; background:' + color + '; display:' + (showFirst ? 'none' : 'block') + '"></div></div><div class="step-right"><span class="pct">' + s.count.toLocaleString() + '</span><span class="pct-pct funnel-from-first" style="display:' + (showFirst ? 'inline' : 'none') + '">' + s.pctFirst + '%</span><span class="pct-pct funnel-from-prev" style="display:' + (showFirst ? 'none' : 'inline') + '">' + s.pctPrev + '%</span><span class="delta zero days-back" style="display:block;font-size:11px;color:var(--text-muted)"><span class="period-text">' + period + '</span> days</span></div></div>';
+                html += `<div class="funnel-step">
+                    <span class="step-name">${s.name}</span>
+                    <div class="bar-wrap">
+                        <div class="bar funnel-from-first" style="width:${s.pctFirst}%; background:${color}; display:${showFirst ? 'block' : 'none'}"></div>
+                        <div class="bar funnel-from-prev" style="width:${s.pctPrev}%; background:${color}; display:${showFirst ? 'none' : 'block'}"></div>
+                    </div>
+                    <div class="step-right">
+                        <span class="pct">${s.count.toLocaleString()}</span>
+                        <span class="pct-pct funnel-from-first" style="display:${showFirst ? 'inline' : 'none'}">${s.pctFirst}%</span>
+                        <span class="pct-pct funnel-from-prev" style="display:${showFirst ? 'none' : 'inline'}">${s.pctPrev}%</span>
+                        <span class="delta zero days-back" style="display:block;font-size:11px;color:var(--text-muted)"><span class="period-text">${period}</span> days</span>
+                    </div>
+                </div>`;
             });
             const el = document.getElementById(containerId);
             if (el) el.innerHTML = html;
@@ -1001,12 +1042,15 @@
         renderSteps(stepsSite, 'funnel-steps-site', ['#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef']);
         renderSteps(stepsGallery, 'funnel-steps-gallery', ['#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef']);
     }
+
     function applyFunnelBasis() {
         const basis = document.querySelector('.funnel-basis-btn.active')?.dataset.basis || 'first';
         const showFirst = basis === 'first';
         document.querySelectorAll('.funnel-from-first').forEach(el => { el.style.display = showFirst ? (el.classList.contains('bar') ? 'block' : 'inline') : 'none'; });
         document.querySelectorAll('.funnel-from-prev').forEach(el => { el.style.display = showFirst ? 'none' : (el.classList.contains('bar') ? 'block' : 'inline'); });
     }
+
+    // --- Chart Initialization ---
     const chartInstances = {};
     const chartDefaults = {
         responsive: true,
@@ -1018,6 +1062,7 @@
         },
         elements: { point: { radius: 0, hitRadius: 10 } }
     };
+
     const barPercentPlugin = {
         id: 'barPercentLabel',
         afterDatasetsDraw(chart) {
@@ -1040,6 +1085,7 @@
             });
         }
     };
+
     const barValueLabelPlugin = {
         id: 'barValueLabel',
         afterDatasetsDraw(chart) {
@@ -1064,6 +1110,7 @@
             });
         }
     };
+
     function getOverviewNewReadyStackedData(mode) {
         const byDate = {};
         GALLERY_DASHBOARD_FACT.forEach(f => {
@@ -1096,6 +1143,7 @@
         );
         return { labels: dateLabels, datasets, datasetsPct, dimLabels };
     }
+
     function applyOverviewNewReadyStackedChart() {
         const sel = document.getElementById('overview-new-ready-filter');
         const labelEl = document.getElementById('overview-new-ready-filter-label');
@@ -1116,6 +1164,7 @@
             ch.update('none');
         }
     }
+
     function applyFunnelOvertimeMode() {
         const mode = document.querySelector('.funnel-overtime-btn.active')?.dataset.mode || 'count';
         const labelEl = document.getElementById('funnel-overtime-label');
@@ -1141,27 +1190,51 @@
         }
         ch.update('none');
     }
+
     function initCharts() {
         if (typeof Chart === 'undefined') return;
         const labels = GALLERY_DASHBOARD_MAIN.map(r => formatChartDateMmmDd(r.period_days));
         const main = GALLERY_DASHBOARD_MAIN;
+        
+        // 1. Cumulative Ready
         chartInstances['chart-cumulative-ready'] = new Chart(document.getElementById('chart-cumulative-ready'), {
             type: 'line',
             data: {
                 labels,
-                datasets: [{ label: 'Ready Sites', data: GALLERY_DASHBOARD_MAIN.map(r => r.ready_sites), borderColor: CHART_COLORS.accent, backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.4 }]
+                datasets: [{ 
+                    label: 'Ready Sites', 
+                    data: GALLERY_DASHBOARD_MAIN.map(r => r.ready_sites),
+                    borderColor: CHART_COLORS.accent,
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
             },
             options: chartDefaults
         });
+
+        // 2. New ready sites trend (incremental per period from MAIN) — line chart
         const newReadyByPeriod = main.map((r, i) => {
             const prev = r.ready_sites_prev;
             return prev != null ? Math.max(0, r.ready_sites - prev) : r.ready_sites;
         });
         chartInstances['chart-new-ready-trend'] = new Chart(document.getElementById('chart-new-ready-trend'), {
             type: 'line',
-            data: { labels, datasets: [{ label: 'New Ready', data: newReadyByPeriod, borderColor: CHART_COLORS.accentDim, backgroundColor: 'rgba(99, 102, 241, 0.1)', fill: true, tension: 0.4 }] },
+            data: {
+                labels,
+                datasets: [{
+                    label: 'New Ready',
+                    data: newReadyByPeriod,
+                    borderColor: CHART_COLORS.accentDim,
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
             options: chartDefaults
         });
+
+        // 3. Stacked Composition (by dimension) — display as %, tooltip shows % and count
         const stackedBuilt = getOverviewNewReadyStackedData(document.getElementById('overview-new-ready-filter')?.value || 'installation_source');
         const stackedLabels = stackedBuilt.dimLabels.length ? stackedBuilt.dimLabels : ['Other'];
         chartInstances['chart-new-ready-stacked'] = new Chart(document.getElementById('chart-new-ready-stacked'), {
@@ -1178,10 +1251,26 @@
             },
             options: {
                 ...chartDefaults,
-                scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: CHART_COLORS.grid }, max: 100, ticks: { callback: function(v) { return v + '%'; } } } },
-                plugins: { ...chartDefaults.plugins, tooltip: { callbacks: { label: function(ctx) { const pct = ctx.raw != null ? ctx.raw : 0; const count = (ctx.dataset.rawCounts && ctx.dataset.rawCounts[ctx.dataIndex] != null) ? ctx.dataset.rawCounts[ctx.dataIndex] : ''; return ctx.dataset.label + ': ' + pct + '%' + (count !== '' ? ' (' + Number(count).toLocaleString() + ' sites)' : ''); } } } }
+                scales: {
+                    x: { stacked: true, grid: { display: false } },
+                    y: { stacked: true, grid: { color: CHART_COLORS.grid }, max: 100, ticks: { callback: function(v) { return v + '%'; } } }
+                },
+                plugins: {
+                    ...chartDefaults.plugins,
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                const pct = ctx.raw != null ? ctx.raw : 0;
+                                const count = (ctx.dataset.rawCounts && ctx.dataset.rawCounts[ctx.dataIndex] != null) ? ctx.dataset.rawCounts[ctx.dataIndex] : '';
+                                return ctx.dataset.label + ': ' + pct + '%' + (count !== '' ? ' (' + Number(count).toLocaleString() + ' sites)' : '');
+                            }
+                        }
+                    }
+                }
             }
         });
+
+        // 4. Churn (from MAIN: real counts per period, stacked)
         const churnUnpub = main.map(r => r.churn_unpublished_count);
         const churnDel = main.map(r => r.churn_deleted_count);
         const churnRepl = main.map(r => r.churn_replaced_count);
@@ -1191,13 +1280,24 @@
         const churnPctR = churnTotals.map((t, i) => t ? Math.round((churnRepl[i] / t) * 100) : 0);
         chartInstances['chart-churn-daily-pct'] = new Chart(document.getElementById('chart-churn-daily-pct'), {
             type: 'bar',
-            data: { labels, datasets: [
-                { label: 'Site unpublished', data: churnPctU, backgroundColor: CHART_COLORS.danger, stack: 'churn' },
-                { label: 'Gallery deleted (no other)', data: churnPctD, backgroundColor: CHART_COLORS.warning, stack: 'churn' },
-                { label: 'Item with replace image deleted (no new)', data: churnPctR, backgroundColor: CHART_COLORS.accentDim, stack: 'churn' }
-            ]},
-            options: { ...chartDefaults, scales: { x: { stacked: true, grid: { display: false }, ticks: { color: CHART_COLORS.text } }, y: { stacked: true, grid: { color: CHART_COLORS.grid }, ticks: { color: CHART_COLORS.text, callback: function(v) { return v + '%'; } }, max: 100 } } }
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Site unpublished', data: churnPctU, backgroundColor: CHART_COLORS.danger, stack: 'churn' },
+                    { label: 'Gallery deleted (no other)', data: churnPctD, backgroundColor: CHART_COLORS.warning, stack: 'churn' },
+                    { label: 'Item with replace image deleted (no new)', data: churnPctR, backgroundColor: CHART_COLORS.accentDim, stack: 'churn' }
+                ]
+            },
+            options: {
+                ...chartDefaults,
+                scales: {
+                    x: { stacked: true, grid: { display: false }, ticks: { color: CHART_COLORS.text } },
+                    y: { stacked: true, grid: { color: CHART_COLORS.grid }, ticks: { color: CHART_COLORS.text, callback: function(v) { return v + '%'; } }, max: 100 }
+                }
+            }
         });
+
+        // 5. Funnel Over Time (5 steps, count or %)
         chartInstances['chart-funnel-overtime'] = new Chart(document.getElementById('chart-funnel-overtime'), {
             type: 'line',
             data: {
@@ -1212,6 +1312,8 @@
             },
             options: chartDefaults
         });
+
+        // 6. Installation over time by source (sites + galleries data for grain toggle)
         const srcLabels = DIM_BY_SOURCE.labels.length ? DIM_BY_SOURCE.labels : ['All'];
         const totalDimSites = DIM_BY_SOURCE.data.reduce((s, x) => s + (x.sites || 0), 0);
         const installShareBySource = totalDimSites > 0 ? DIM_BY_SOURCE.data.map(d => (d.sites || 0) / totalDimSites) : srcLabels.map(() => 1 / srcLabels.length);
@@ -1219,11 +1321,21 @@
         const installDataGal = srcLabels.map((_, i) => main.map((r, j) => Math.round((r.installed_galleries || 0) * (installShareBySource[i] ?? 0.2) * (1 + j * 0.01))));
         chartInstances['chart-installs-overtime-by-src'] = new Chart(document.getElementById('chart-installs-overtime-by-src'), {
             type: 'line',
-            data: { labels, datasets: srcLabels.map((l, i) => ({ label: l, data: installDataSites[i] || labels.map(() => 0), borderColor: CHART_COLORS.palette[i % CHART_COLORS.palette.length], tension: 0.4 })) },
+            data: {
+                labels,
+                datasets: srcLabels.map((l, i) => ({
+                    label: l,
+                    data: installDataSites[i] || labels.map(() => 0),
+                    borderColor: CHART_COLORS.palette[i % CHART_COLORS.palette.length],
+                    tension: 0.4
+                }))
+            },
             options: chartDefaults
         });
         chartInstances['_installDataSites'] = installDataSites;
         chartInstances['_installDataGal'] = installDataGal;
+
+        // 7–9. Ready % by source, Ready % by preset, Preset ranked — data stored for lazy init (created when tab is shown)
         const FALLBACK_SRC_LABELS = ['Editor', 'Template', 'App Market', 'Duplicate', 'Import', 'Other'];
         const FALLBACK_SRC_SITES = [120, 80, 45, 30, 18, 12];
         const FALLBACK_SRC_GAL = [95, 62, 38, 24, 14, 9];
@@ -1239,6 +1351,7 @@
         chartInstances['_readyPctPctGal'] = srcData.length ? srcData.map((d) => (d.galleries || 0) ? Math.round(100 * (Math.round((d.ready || 0) * ((d.galleries || 0) / (d.sites || 1))) / (d.galleries || 1))) : 0) : [50, 48, 52, 45, 40, 48];
         chartInstances['_readyPctReadySites'] = srcData.length ? srcData.map(d => d.ready || 0) : [62, 38, 25, 12, 7, 5];
         chartInstances['_readyPctReadyGalleries'] = srcData.length ? srcData.map(d => Math.round((d.ready || 0) * ((d.galleries || 0) / (d.sites || 1)))) : [48, 30, 20, 10, 6, 4];
+
         const FALLBACK_PRESET_LABELS = ['grid', 'masonry', 'slider', 'carousel', 'strip', 'Other'];
         const FALLBACK_PRESET_SITES = [90, 70, 55, 40, 35, 30];
         const FALLBACK_PRESET_GAL = [110, 95, 70, 55, 48, 38];
@@ -1256,6 +1369,7 @@
         chartInstances['_presetPctGal'] = presetData.length ? presetData.map((d, i) => (d.galleries || 0) ? Math.round(100 * presetReadyGal[i] / d.galleries) : 0) : [45, 52, 48, 44, 48, 42];
         chartInstances['_presetReadySites'] = presetData.length ? presetData.map(d => d.ready || 0) : [40, 35, 26, 17, 16, 12];
         chartInstances['_presetReadyGalleries'] = presetData.length ? presetReadyGal : [44, 36, 34, 24, 23, 16];
+
         const FALLBACK_RANKED_LABELS = ['grid', 'masonry', 'slider', 'carousel', 'strip', 'Other'];
         const FALLBACK_RANKED_DATA = [420, 380, 290, 210, 180, 95];
         let presetRankedDataRaw = (DIM_BY_PRESET.data && DIM_BY_PRESET.data.length) ? DIM_BY_PRESET.data.map(d => (d.ready || 0) + (d.galleries || 0)) : [];
@@ -1273,20 +1387,48 @@
         }
         let rankedLabels = useRankedFallback ? FALLBACK_RANKED_LABELS : presetRankedLabelsRaw;
         let rankedData = useRankedFallback ? FALLBACK_RANKED_DATA : (presetRankedDataRaw.length === rankedLabels.length ? presetRankedDataRaw : rankedLabels.map((_, i) => presetRankedDataRaw[i] ?? 0));
+        // Keep sort descending: preset with most sites first (top bar)
         chartInstances['_presetRankedLabels'] = rankedLabels;
         chartInstances['_presetRankedData'] = rankedData;
         chartInstances['_presetRankedSiteCounts'] = chartInstances['_presetRankedSiteCounts'] || [];
+
         chartInstances['chart-ready-galleries-histogram'] = new Chart(document.getElementById('chart-ready-galleries-histogram'), {
             type: 'bar',
-            data: { labels: ['1', '2', '3', '4', '5', '6+'], datasets: [{ label: 'Sites', data: (function() { const buckets = [0,0,0,0,0,0]; GALLERY_SITE_DIM.filter(d=>d.is_ready).forEach(d => { const g = Math.min(d.gallery_count || 1, 6); buckets[g >= 6 ? 5 : g - 1]++; }); return buckets.some(x=>x>0) ? buckets : [800, 150, 40, 10, 5, 2]; })(), backgroundColor: CHART_COLORS.accent }] },
+            data: {
+                labels: ['1', '2', '3', '4', '5', '6+'],
+                datasets: [{ label: 'Sites', data: (function() {
+                    const buckets = [0,0,0,0,0,0];
+                    GALLERY_SITE_DIM.filter(d=>d.is_ready).forEach(d => {
+                        const g = Math.min(d.gallery_count || 1, 6);
+                        buckets[g >= 6 ? 5 : g - 1]++;
+                    });
+                    return buckets.some(x=>x>0) ? buckets : [800, 150, 40, 10, 5, 2];
+                })(), backgroundColor: CHART_COLORS.accent }]
+            },
             options: chartDefaults
         });
+
         chartInstances['chart-ready-items-histogram'] = new Chart(document.getElementById('chart-ready-items-histogram'), {
             type: 'bar',
-            data: { labels: ['1-3', '4-6', '7-10', '11-15', '16-20', '21+'], datasets: [{ label: 'Galleries', data: (function() { const buckets = ['1-3','4-6','7-10','11-15','16-20','21+']; const counts = [0,0,0,0,0,0]; const bucket = (c) => c<=3?'1-3':c<=6?'4-6':c<=10?'7-10':c<=15?'11-15':c<=20?'16-20':'21+'; GALLERY_SITE_DIM.filter(d=>d.is_ready).forEach(d => { const b = bucket(d.item_count || 0); const i = buckets.indexOf(b); if (i >= 0) counts[i] += d.gallery_count || 1; }); return counts.some(x=>x>0) ? counts : [300, 500, 150, 50, 30, 20]; })(), backgroundColor: CHART_COLORS.success }] },
+            data: {
+                labels: ['1-3', '4-6', '7-10', '11-15', '16-20', '21+'],
+                datasets: [{ label: 'Galleries', data: (function() {
+                    const buckets = ['1-3','4-6','7-10','11-15','16-20','21+'];
+                    const counts = [0,0,0,0,0,0];
+                    const bucket = (c) => c<=3?'1-3':c<=6?'4-6':c<=10?'7-10':c<=15?'11-15':c<=20?'16-20':'21+';
+                    GALLERY_SITE_DIM.filter(d=>d.is_ready).forEach(d => {
+                        const b = bucket(d.item_count || 0);
+                        const i = buckets.indexOf(b);
+                        if (i >= 0) counts[i] += d.gallery_count || 1;
+                    });
+                    return counts.some(x=>x>0) ? counts : [300, 500, 150, 50, 30, 20];
+                })(), backgroundColor: CHART_COLORS.success }]
+            },
             options: chartDefaults
         });
     }
+
+    // --- Interaction ---
     document.querySelectorAll('.period-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
@@ -1294,6 +1436,7 @@
             updateUI(btn.dataset.days);
         });
     });
+
     function resizeChartsInPanel(panelId) {
         const panel = document.getElementById(panelId);
         if (!panel) return;
@@ -1304,9 +1447,24 @@
             });
         });
     }
+
     function ensureLazyCharts(panelId) {
         if (typeof Chart === 'undefined') return;
-        const pctChartOpts = { responsive: true, maintainAspectRatio: false, animation: { duration: 400 }, indexAxis: 'y', layout: { padding: { right: 60 } }, plugins: { legend: { labels: { color: CHART_COLORS.text, font: { size: 11 } } }, barPercentLabel: { values: [] } }, scales: { x: { min: 0, ticks: { color: CHART_COLORS.text }, grid: { color: CHART_COLORS.grid }, title: { display: true, text: 'Count (sites)', color: CHART_COLORS.text } }, y: { ticks: { color: CHART_COLORS.text }, grid: { color: CHART_COLORS.grid } } };
+        const pctChartOpts = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 400 },
+            indexAxis: 'y',
+            layout: { padding: { right: 60 } },
+            plugins: {
+                legend: { labels: { color: CHART_COLORS.text, font: { size: 11 } } },
+                barPercentLabel: { values: [] }
+            },
+            scales: {
+                x: { min: 0, ticks: { color: CHART_COLORS.text }, grid: { color: CHART_COLORS.grid }, title: { display: true, text: 'Count (sites)', color: CHART_COLORS.text } },
+                y: { ticks: { color: CHART_COLORS.text }, grid: { color: CHART_COLORS.grid } }
+            }
+        };
         if (panelId === 'installations') {
             const elSrc = document.getElementById('chart-ready-pct-by-src');
             if (elSrc && !Chart.getChart(elSrc)) {
@@ -1314,9 +1472,16 @@
                 const data = chartInstances['_readyPctSites'] || [120, 80, 45, 30, 18, 12];
                 const pctSites = chartInstances['_readyPctPctSites'] || [];
                 const readySites = chartInstances['_readyPctReadySites'] || [];
+                const pctGal = chartInstances['_readyPctPctGal'] || [];
+                const readyGal = chartInstances['_readyPctReadyGalleries'] || [];
                 const n = Math.min(labels.length, data.length) || 6;
                 const opts = { ...pctChartOpts, plugins: { ...pctChartOpts.plugins, barPercentLabel: { values: pctSites.slice(0, n) }, tooltip: { callbacks: { label: function(ctx) { return ctx.raw + ' sites (' + (readySites[ctx.dataIndex] ?? 0) + ' ready) · ' + (pctSites[ctx.dataIndex] ?? 0) + '%'; } } } } };
-                chartInstances['chart-ready-pct-by-src'] = new Chart(elSrc, { type: 'bar', plugins: [barPercentPlugin], data: { labels: labels.slice(0, n), datasets: [{ label: 'Sites', data: data.slice(0, n), backgroundColor: CHART_COLORS.accent }] }, options: opts });
+                chartInstances['chart-ready-pct-by-src'] = new Chart(elSrc, {
+                    type: 'bar',
+                    plugins: [barPercentPlugin],
+                    data: { labels: labels.slice(0, n), datasets: [{ label: 'Sites', data: data.slice(0, n), backgroundColor: CHART_COLORS.accent }] },
+                    options: opts
+                });
             }
             const elPreset = document.getElementById('chart-ready-pct-by-preset');
             if (elPreset && !Chart.getChart(elPreset)) {
@@ -1324,9 +1489,16 @@
                 const data = chartInstances['_presetSites'] || [90, 70, 55, 40, 35, 30];
                 const pctSites = chartInstances['_presetPctSites'] || [];
                 const readySites = chartInstances['_presetReadySites'] || [];
+                const pctGal = chartInstances['_presetPctGal'] || [];
+                const readyGal = chartInstances['_presetReadyGalleries'] || [];
                 const n = Math.min(labels.length, data.length) || 6;
                 const opts = { ...pctChartOpts, plugins: { ...pctChartOpts.plugins, barPercentLabel: { values: pctSites.slice(0, n) }, tooltip: { callbacks: { label: function(ctx) { return ctx.raw + ' sites (' + (readySites[ctx.dataIndex] ?? 0) + ' ready) · ' + (pctSites[ctx.dataIndex] ?? 0) + '%'; } } } } };
-                chartInstances['chart-ready-pct-by-preset'] = new Chart(elPreset, { type: 'bar', plugins: [barPercentPlugin], data: { labels: labels.slice(0, n), datasets: [{ label: 'Sites', data: data.slice(0, n), backgroundColor: CHART_COLORS.accentDim }] }, options: opts });
+                chartInstances['chart-ready-pct-by-preset'] = new Chart(elPreset, {
+                    type: 'bar',
+                    plugins: [barPercentPlugin],
+                    data: { labels: labels.slice(0, n), datasets: [{ label: 'Sites', data: data.slice(0, n), backgroundColor: CHART_COLORS.accentDim }] },
+                    options: opts
+                });
             }
         }
         if (panelId === 'ready') {
@@ -1339,10 +1511,37 @@
                 const finalLabels = labels.slice(0, n);
                 const finalData = data.slice(0, n);
                 const colors = finalLabels.map((_, i) => CHART_COLORS.palette[i % CHART_COLORS.palette.length]);
-                chartInstances['chart-preset-ranked'] = new Chart(elRanked, { type: 'bar', plugins: [barValueLabelPlugin], data: { labels: finalLabels, datasets: [{ label: 'Volume', data: finalData, backgroundColor: colors }] }, options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: { padding: { right: 70 } }, plugins: { legend: { display: false }, barValueLabel: { enabled: true }, tooltip: { callbacks: { label: function(ctx) { const sites = siteCounts[ctx.dataIndex] != null ? siteCounts[ctx.dataIndex] : ''; return 'Gallery count: ' + ctx.raw + (sites !== '' ? ' · Sites: ' + sites : ''); } } } }, scales: { x: { min: 0, stacked: true, ticks: { color: CHART_COLORS.text }, grid: { color: CHART_COLORS.grid }, title: { display: true, text: 'Gallery count', color: CHART_COLORS.text } }, y: { stacked: true, ticks: { color: CHART_COLORS.text }, grid: { color: CHART_COLORS.grid } } } } });
+                chartInstances['chart-preset-ranked'] = new Chart(elRanked, {
+                    type: 'bar',
+                    plugins: [barValueLabelPlugin],
+                    data: { labels: finalLabels, datasets: [{ label: 'Volume', data: finalData, backgroundColor: colors }] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        layout: { padding: { right: 70 } },
+                        plugins: {
+                            legend: { display: false },
+                            barValueLabel: { enabled: true },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        const sites = siteCounts[ctx.dataIndex] != null ? siteCounts[ctx.dataIndex] : '';
+                                        return 'Gallery count: ' + ctx.raw + (sites !== '' ? ' · Sites: ' + sites : '');
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { min: 0, stacked: true, ticks: { color: CHART_COLORS.text }, grid: { color: CHART_COLORS.grid }, title: { display: true, text: 'Gallery count', color: CHART_COLORS.text } },
+                            y: { stacked: true, ticks: { color: CHART_COLORS.text }, grid: { color: CHART_COLORS.grid } }
+                        }
+                    }
+                });
             }
         }
     }
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1351,6 +1550,7 @@
             const panelId = btn.dataset.tab;
             const panel = document.getElementById(panelId);
             if (panel) panel.classList.add('active');
+            // Wait two frames so the newly visible panel is laid out and canvas has non-zero size
             requestAnimationFrame(function() {
                 requestAnimationFrame(function() {
                     ensureLazyCharts(panelId);
@@ -1359,11 +1559,36 @@
             });
         });
     });
-    document.querySelectorAll('.funnel-level-btn').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('.funnel-level-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); const lvl = btn.dataset.level; document.getElementById('funnel-block-site').style.display = lvl === 'site' ? 'block' : 'none'; document.getElementById('funnel-block-gallery').style.display = lvl === 'gallery' ? 'block' : 'none'; }); });
-    document.querySelectorAll('.funnel-basis-btn').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('.funnel-basis-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); applyFunnelBasis(); }); });
-    document.querySelectorAll('.funnel-overtime-btn').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('.funnel-overtime-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); applyFunnelOvertimeMode(); }); });
+
+    document.querySelectorAll('.funnel-level-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.funnel-level-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const lvl = btn.dataset.level;
+            document.getElementById('funnel-block-site').style.display = lvl === 'site' ? 'block' : 'none';
+            document.getElementById('funnel-block-gallery').style.display = lvl === 'gallery' ? 'block' : 'none';
+        });
+    });
+
+    document.querySelectorAll('.funnel-basis-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.funnel-basis-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            applyFunnelBasis();
+        });
+    });
+
+    document.querySelectorAll('.funnel-overtime-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.funnel-overtime-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            applyFunnelOvertimeMode();
+        });
+    });
+
     const overviewFilter = document.getElementById('overview-new-ready-filter');
     if (overviewFilter) overviewFilter.addEventListener('change', () => { applyOverviewNewReadyStackedChart(); });
+
     function refreshUIFromFilters() {
         const period = document.querySelector('.period-btn.active')?.dataset.days || '7';
         updateUI(period);
@@ -1372,6 +1597,7 @@
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', refreshUIFromFilters);
     });
+
     const readyGalleriesFilter = document.getElementById('ready-histogram-galleries-filter');
     if (readyGalleriesFilter) readyGalleriesFilter.addEventListener('change', () => {
         const labelEl = document.getElementById('ready-galleries-filter-label');
@@ -1414,6 +1640,8 @@
             ch.update('none');
         }
     });
+
+    // Populate Filters
     const countrySel = document.getElementById('filter-country');
     [...new Set(GALLERY_SITE_DIM.map(d => d.first_country_code))].filter(c => c).sort().forEach(c => {
         const o = document.createElement('option'); o.value = c; o.textContent = c; countrySel.appendChild(o);
@@ -1422,6 +1650,8 @@
     if (langSel) [...new Set(GALLERY_SITE_DIM.map(d => d.account_language))].filter(Boolean).sort().forEach(l => {
         const o = document.createElement('option'); o.value = l; o.textContent = l; langSel.appendChild(o);
     });
+
+    // Grain toggles (Sites / Galleries) for Installation charts
     document.querySelectorAll('.chart-grain-toggle .grain-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const chartId = this.dataset.chart;
@@ -1464,22 +1694,34 @@
             }
         });
     });
+
     function getChartThemeColors() {
       const s = getComputedStyle(document.documentElement);
-      return { text: s.getPropertyValue('--chart-text').trim() || '#8b9cb5', grid: s.getPropertyValue('--chart-grid').trim() || '#2d3a4d' };
+      return {
+        text: s.getPropertyValue('--chart-text').trim() || '#8b9cb5',
+        grid: s.getPropertyValue('--chart-grid').trim() || '#2d3a4d'
+      };
     }
+
     function updateAllChartsForTheme() {
       const colors = getChartThemeColors();
       Object.keys(chartInstances).forEach(key => {
         if (key.startsWith('_')) return;
         const ch = chartInstances[key];
         if (!ch || !ch.options || !ch.options.scales) return;
-        if (ch.options.scales.x) { if (ch.options.scales.x.ticks) ch.options.scales.x.ticks.color = colors.text; if (ch.options.scales.x.grid) ch.options.scales.x.grid.color = colors.grid; }
-        if (ch.options.scales.y) { if (ch.options.scales.y.ticks) ch.options.scales.y.ticks.color = colors.text; if (ch.options.scales.y.grid) ch.options.scales.y.grid.color = colors.grid; }
+        if (ch.options.scales.x) {
+          if (ch.options.scales.x.ticks) ch.options.scales.x.ticks.color = colors.text;
+          if (ch.options.scales.x.grid) ch.options.scales.x.grid.color = colors.grid;
+        }
+        if (ch.options.scales.y) {
+          if (ch.options.scales.y.ticks) ch.options.scales.y.ticks.color = colors.text;
+          if (ch.options.scales.y.grid) ch.options.scales.y.grid.color = colors.grid;
+        }
         if (ch.options.plugins && ch.options.plugins.legend && ch.options.plugins.legend.labels) ch.options.plugins.legend.labels.color = colors.text;
         ch.update('none');
       });
     }
+
     document.documentElement.setAttribute('data-theme', 'light');
     document.querySelectorAll('.theme-btn').forEach(btn => {
       if (btn.dataset.theme === 'light') btn.classList.add('active');
@@ -1495,6 +1737,8 @@
         if (typeof updateAllChartsForTheme === 'function') updateAllChartsForTheme();
       });
     });
+
+    // Init
     updateUI(7);
     setTimeout(() => {
       initCharts();
@@ -1502,6 +1746,8 @@
       applyFunnelOvertimeMode();
       if (typeof updateAllChartsForTheme === 'function') updateAllChartsForTheme();
     }, 100);
+
   </script>
 </body>
 </html>
+
